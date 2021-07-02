@@ -23,7 +23,7 @@ class RemoveFieldRefactoringListener(JavaParserLabeledListener):
         self.token_stream = common_token_stream
         self.class_identifier = class_identifier
         self.class_number = 0
-        self.type_field=None
+
         # Move all the tokens in the source code in a buffer, token_stream_rewriter.
         if common_token_stream is not None:
             self.token_stream_rewriter = TSR(common_token_stream)
@@ -93,41 +93,57 @@ class RemoveFieldRefactoringListener(JavaParserLabeledListener):
         self.enter_field = True
         self.is_found_field = False
 
-    def exitFieldDeclaration(self, ctx:JavaParserLabeled.FieldDeclarationContext):
-        if (self.is_found_field):
-            self.type_field=ctx.typeType().getText()
+    # def enterFieldDeclaration(self, ctx:Java9_v2Parser.FieldDeclarationContext):
+    #     if not self.enter_class:
+    #         return
+    #     self.enter_field = True
+    #     self.is_found_field = False
 
-    def enterAnnotation(self, ctx:JavaParserLabeled.AnnotationContext):
-        start = ctx.start.tokenIndex
-        stop = ctx.stop.tokenIndex
-        new_code = '\n\t'
-        new_code += 'public '+self.type_field + ' get' +str.capitalize(self.fieldname)
-        new_code += '() { \n\t\t return this.' + self.fieldname + ';' + '\n\t}'
-
-        # Mutator body
-        new_code += '\n\t'
-        new_code += 'public void set' + str.capitalize(self.fieldname)
-        new_code += '(' + self.type_field  + ' ' + self.fieldname + ') { \n\t\t'
-        new_code += 'this.' + self.fieldname + ' = ' + self.fieldname + ';' + '\n\t}\n'
-        self.token_stream_rewriter.insertAfter(ctx.stop.tokenIndex, new_code)
-        print(ctx.getText())
-
-
+    # Exit a parse tree produced by Java9_v2Parser#fieldDeclaration.
 
     def exitClassBodyDeclaration2(self, ctx:JavaParserLabeled.ClassBodyDeclaration2Context):
         if not self.enter_class:
             return
+
+        # print("Enter 'exitFieldDeclaration' Methode")
         start = ctx.start.tokenIndex
         stop = ctx.stop.tokenIndex
-        # print("Enter 'exitFieldDeclaration' Methode")
 
         if (self.is_found_field):
             self.token_stream_rewriter.delete(program_name=self.token_stream_rewriter.DEFAULT_PROGRAM_NAME,
                                               from_idx=start,
                                               to_idx=stop)
-            new_code = 'private '+self.type_field+" "+self.fieldname+";"
-            self.token_stream_rewriter.insertAfter(ctx.stop.tokenIndex, new_code)
+            print(f'Field: "{self.fieldname}" SUCCESSFULLY REMOVED...')
 
+    # def exitFieldDeclaration(self, ctx:JavaParserLabeled.FieldDeclarationContext):
+    #     if not self.enter_class:
+    #         return
+    #
+    #     # print("Enter 'exitFieldDeclaration' Methode")
+    #     start = ctx.start.tokenIndex
+    #     stop = ctx.stop.tokenIndex
+    #
+    #     if (self.is_found_field):
+    #         self.token_stream_rewriter.delete(program_name=self.token_stream_rewriter.DEFAULT_PROGRAM_NAME,
+    #                                           from_idx=start,
+    #                                           to_idx=stop)
+    #         print(f'Field: "{self.fieldname}" SUCCESSFULLY REMOVED...')
+
+    # def exitFieldDeclaration(self, ctx: Java9_v2Parser.FieldDeclarationContext):
+    #     if not self.enter_class:
+    #         return
+    #
+    #     # print("Enter 'exitFieldDeclaration' Methode")
+    #     start = ctx.start.tokenIndex
+    #     stop = ctx.stop.tokenIndex
+    #
+    #     if (self.is_found_field):
+    #         self.token_stream_rewriter.delete(program_name=self.token_stream_rewriter.DEFAULT_PROGRAM_NAME,
+    #                                           from_idx=start,
+    #                                           to_idx=stop)
+    #         print(f'Field: "{self.fieldname}" SUCCESSFULLY REMOVED...')
+
+    # Exit a parse tree produced by Java9_v2Parser#variableDeclaratorList.
 
     def exitVariableDeclarators(self, ctx:JavaParserLabeled.VariableDeclaratorsContext):
         if not (self.enter_class and self.enter_field):
@@ -153,28 +169,46 @@ class RemoveFieldRefactoringListener(JavaParserLabeledListener):
                 print(f'Field: "{self.fieldname}" SUCCESSFULLY REMOVED...')
                 break
 
+    # def exitVariableDeclaratorList(self, ctx:Java9_v2Parser.VariableDeclaratorListContext):
+    #     if not (self.enter_class and self.enter_field):
+    #         return
+    #     # print("Enter 'exitVariableDeclaratorList' Methode")
+    #     fields = ctx.getText().split(',')
+    #     start = ctx.start.tokenIndex
+    #     stop = ctx.stop.tokenIndex
+    #     for index, field in enumerate(fields):
+    #         if (self.fieldname == str(field).split('=')[0]):
+    #             self.is_found = True
+    #             self.is_found_field = True
+    #             print(f'Find "{self.fieldname}", At: {start} - {stop}')
+    #             if (len(fields) == 1):
+    #                 return
+    #             del fields[index]
+    #             print('New: ' ,', '.join(str(field) for field in fields))
+    #             self.token_stream_rewriter.replace(program_name=self.token_stream_rewriter.DEFAULT_PROGRAM_NAME,
+    #                                                from_idx=start,
+    #                                                to_idx=stop,
+    #                                                text=', '.join(str(field) for field in fields))
+    #             self.is_found_field = False
+    #             print(f'Field: "{self.fieldname}" SUCCESSFULLY REMOVED...')
+    #             break
 
     def exitCompilationUnit(self, ctx:JavaParserLabeled.CompilationUnitContext):
         if not self.is_found:
             print(f'Field "{self.fieldname}" NOT FOUND...')
-        else:
-            start = ctx.start.tokenIndex
-            stop = ctx.stop.tokenIndex
-            new_code = '\n\t'
-            new_code += 'public ' + self.type_field + ' get' + str.capitalize(self.fieldname)
-            new_code += '() { \n\t\t return this.' + self.fieldname + ';' + '\n\t}'
 
-            # Mutator body
-            new_code += '\n\t'
-            new_code += 'public void set' + str.capitalize(self.fieldname)
-            new_code += '(' + self.type_field + ' ' + self.fieldname + ') { \n\t\t'
-            new_code += 'this.' + self.fieldname + ' = ' + self.fieldname + ';' + '\n\t}\n'
-            print('public void set' + str.capitalize(self.fieldname))
-            print(ctx.getText())
-            if not ctx.getText().__contains__('publicvoidset'+str.capitalize(self.fieldname)):
-                self.token_stream_rewriter.insertAfter(ctx.stop.tokenIndex-1, new_code)
+    # # Exit a parse tree produced by Java9_v2Parser#ordinaryCompilation.
+    # def exitOrdinaryCompilation(self, ctx:Java9_v2Parser.OrdinaryCompilationContext):
+    #     if not self.is_found:
+    #         print(f'Field "{self.fieldname}" NOT FOUND...')
+    #
+    # # Exit a parse tree produced by Java9_v2Parser#modularCompilation.
+    # def exitModularCompilation(self, ctx:Java9_v2Parser.ModularCompilationContext):
+    #     if not self.is_found:
+    #         print(f'Field "{self.fieldname}" NOT FOUND...')
 
-directory = "C:\\Users\\asus\\Desktop\\TestProject"
+
+directory = '/home/ali/Desktop/code/TestProject/src/'
 
 
 def main(args):
@@ -196,8 +230,8 @@ def main(args):
     print("=====Create ParseTree Finished=====")
 
     # Step 6: Create an instance of AssignmentStListener
-    my_listener = RemoveFieldRefactoringListener(common_token_stream=token_stream, class_identifier='GodClass',
-                                                 fieldname='field2', filename=args.file)
+    my_listener = RemoveFieldRefactoringListener(common_token_stream=token_stream, class_identifier='User',
+                                                 fieldname='test_var', filename=args.file)
 
     # return
     walker = ParseTreeWalker()
@@ -225,3 +259,4 @@ if __name__ == '__main__':
             name, extension = os.path.splitext(file)
             if extension == '.java':
                 process_file("{}/{}".format(dirname, file))
+
